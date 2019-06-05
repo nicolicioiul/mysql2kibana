@@ -44,7 +44,23 @@ The table can be changes and modified.
  
     
 # Run kibana:
-Run docker-compose up -d,  kibana is configured to run under: http://localhost:5601/
+
+Run 
+    `docker-compose up -d`,  
+kibana is configured to run under: http://localhost:5601/
+
+# Debug
+
+1 Run `docker-compose logs` -f
+
+# Issues
+
+1 Will take some time until the logstash will start to collect information
+
+2 Check the logstash startup errors:  `docker-compose logs -f logstash`
+
+
+
 
 
 
