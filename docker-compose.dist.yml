@@ -1,0 +1,101 @@
+version: '3'
+
+services:
+      
+  es01:
+    build: etc/elasticsearch/docker/
+    container_name: es01
+    environment:
+      - node.name=es01
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es01,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es.data.01:/var/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      esnet:
+        aliases:
+            - elasticsearch 
+      
+  es02:
+    build: etc/elasticsearch/docker/
+    container_name: es02
+    environment:
+      - node.name=es02
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01,es02,
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es.data.02:/var/elasticsearch/data
+    depends_on:
+      - es01      
+    networks:
+      - esnet
+
+  kibana:
+    build: etc/kibana/docker/
+    container_name: kibana
+    environment:
+      - SERVER_NAME='localhost'
+      - ELASTICSEARCH_URL=http://es01:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_HOST=es01
+      - ELASTICSEARCH_PORT=9200
+      - ELASTIC_PWD=changeme
+      - KIBANA_PWD=changeme
+    ports:
+      - 5601:5601
+    depends_on:
+      - es01    
+    networks:
+      - esnet
+
+  logstash:
+    build: etc/logstash/docker
+    container_name: logstash
+    extra_hosts:
+        #Add the mysql host 
+       db: x.x.x.x
+    volumes:
+      - ./etc/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./etc/logstash/config/pipeline/:/usr/share/logstash/pipeline/
+      - ./etc/logstash/var/lastrun:/root/.logstash_jdbc_last_run
+    ports:
+      - '5001:5001'
+    environment:
+      LS_JAVA_OPTS: '-Xmx1024M -Xms1024M'
+      #Mysql login
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=database_name
+      - DB_USERNAME=mysql_user
+      - DB_PASSWORD=mysql_password
+    networks:
+      - esnet
+    depends_on:
+      - es01
+      
+volumes:
+  es.data.01:
+    driver: local
+  es.data.02:
+    driver: local
+    
+networks:
+  esnet:
